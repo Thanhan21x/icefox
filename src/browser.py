@@ -83,7 +83,7 @@ class URL:
             with open(self.path, "r") as f:
                 return f.read()
         elif self.scheme == "data" and self.data_type == "text/html":
-            return  self.data
+            return self.data
         else:
             print("Unsupported scheme")
             # notify error, exit
@@ -99,13 +99,34 @@ class URL:
 # but not the tags
 def show(body):
     in_tag = False
+    in_entity = False
+    entity = ""
     for c in body:
         if c == "<":
             in_tag = True
         elif c == ">":
             in_tag = False
+        elif c == "&":
+            in_entity = True
+        elif c == ";":
+            in_entity = False
+            print_entity(entity)
+            entity = ""
+        elif in_entity:
+            entity += c
         elif not in_tag:
-            print(c, end="")
+            if c == "&lt;":
+                print("<", end="")
+
+def print_entity(entity):
+    if entity == "lt":
+        print("<", end="")
+    elif entity == "gt":
+        print(">", end="")
+    else:
+        print(entity, end="")
+
+
 
 # Load a web page just by stringing together request and show
 def load(url):
