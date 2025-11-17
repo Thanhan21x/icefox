@@ -3,25 +3,27 @@ import ssl
 
 class URL:
     def __init__(self, url):
-        try:
+        # check if "://" in the url:
+        if "://" in url:
             self.scheme, url = url.split("://", 1) # extract the scheme and url
             #assert self.scheme == "http" # only support http
             if self.scheme == "http":
                 self.port = 80
             elif self.scheme == "https":
                 self.port = 443
-        except ValueError:
-            self.scheme, url = url.split(":", 1)
+            # separate the host from the path. 
+            if "/" not in url:
+                url = url + "/"
+            self.host, url = url.split("/", 1)
+            self.path = "/" + url
 
-        # separate the host from the path. 
-        if "/" not in url:
-            url = url + "/"
-        self.host, url = url.split("/", 1)
-        self.path = "/" + url
+            if ":" in self.host:
+                self.host, port = self.host.split(":", 1)
+                self.port = int(port)
 
-        if ":" in self.host:
-            self.host, port = self.host.split(":", 1)
-            self.port = int(port)
+        elif "data:" in url:
+            self.scheme, data = url.split(":", 1)
+            self.data_type, self.data = data.split(",",1)
 
     def request(self):
         if (self.scheme == "http" or self.scheme =="https"):
@@ -80,9 +82,8 @@ class URL:
             # return the content in the file provided the path
             with open(self.path, "r") as f:
                 return f.read()
-        elif self.scheme == "data":
-            print(self.scheme)
-            pass
+        elif self.scheme == "data" and self.data_type == "text/html":
+            return  self.data
         else:
             print("Unsupported scheme")
             # notify error, exit
