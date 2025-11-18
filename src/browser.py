@@ -3,7 +3,11 @@ import ssl
 
 class URL:
     def __init__(self, url):
-        # check if "://" in the url:
+        self.view_source = False
+        if url.startswith("view-source:"):
+            _, url = url.split(":", 1) 
+            self.view_source = True
+
         if "://" in url:
             self.scheme, url = url.split("://", 1) # extract the scheme and url
             #assert self.scheme == "http" # only support http
@@ -21,7 +25,7 @@ class URL:
                 self.host, port = self.host.split(":", 1)
                 self.port = int(port)
 
-        elif "data:" in url:
+        elif url.startswith("data:"):
             self.scheme, data = url.split(":", 1)
             self.data_type, self.data = data.split(",",1)
 
@@ -115,8 +119,13 @@ def show(body):
         elif in_entity:
             entity += c
         elif not in_tag:
-            if c == "&lt;":
-                print("<", end="")
+            print(c, end="")
+def view_source(body):
+    for c in body:
+        if c == ">":
+            print(c)
+        else:
+            print(c, end="")
 
 def print_entity(entity):
     if entity == "lt":
@@ -131,11 +140,15 @@ def print_entity(entity):
 # Load a web page just by stringing together request and show
 def load(url):
     body = url.request()
-    show(body)
+    if url.view_source:
+        view_source(body);
+    else:
+        show(body)
 
 if __name__ == "__main__":
     import sys 
     default_url = "file:///home/iceman/overthewire.txt"
+    
     if len(sys.argv) == 2:
         load(URL(sys.argv[1]))
     elif len(sys.argv) == 1: 
