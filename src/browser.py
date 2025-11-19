@@ -54,7 +54,7 @@ class URL:
             request += self.add_header("Connection", "close")
             request += self.add_header("User-Agent", "icefox")
             request += "\r\n" ## 2 \r\n newlines -> the end
-            print(request)
+
             s.send(request.encode("utf8"))
 
             # read the server's response
@@ -62,6 +62,7 @@ class URL:
             # split the response into pieces
             statusline = response.readline()
             version, status, explaination = statusline.split(" ", 2)
+
             # after the status line come the headers
             response_headers = {}
             while True:
@@ -70,6 +71,9 @@ class URL:
                 header, value = line.split(":", 1)
                 response_headers[header.casefold()] = value.strip()
 
+            print(response_headers)
+            #if "location" in response_headers:
+            #    return self.request(response_headers['location'])
             # some header -> tell us that the data we're 
             # trying to access is being sent in an unsual way 
             assert "transer_encoding" not in response_headers
@@ -77,6 +81,14 @@ class URL:
 
             # usually, the content comes after the headers
             content = response.read()
+            if "301" in content:
+                try:
+                    print("Redirecting")
+                    self.__init__(response_headers['location'])
+                    return self.request()
+                except:
+                    pass
+
             s.close()
 
             # it's the body that we're going to display,
@@ -97,10 +109,6 @@ class URL:
         return "{}: {}\r\n".format(header, value)
 
 
-# Displaying the HTML
-
-# Take the page HTML and print all the extract
-# but not the tags
 def show(body):
     in_tag = False
     in_entity = False
