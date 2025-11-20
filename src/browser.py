@@ -1,5 +1,6 @@
 import socket
 import ssl
+import tkinter
 
 class URL:
     def __init__(self, url):
@@ -53,8 +54,8 @@ class URL:
             request += self.add_header("Host", self.host)
             request += self.add_header("Connection", "close")
             request += self.add_header("User-Agent", "icefox")
+            request += self.add_header("Localtion", "/")
             request += "\r\n" ## 2 \r\n newlines -> the end
-
             s.send(request.encode("utf8"))
 
             # read the server's response
@@ -71,9 +72,6 @@ class URL:
                 header, value = line.split(":", 1)
                 response_headers[header.casefold()] = value.strip()
 
-            print(response_headers)
-            #if "location" in response_headers:
-            #    return self.request(response_headers['location'])
             # some header -> tell us that the data we're 
             # trying to access is being sent in an unsual way 
             assert "transer_encoding" not in response_headers
@@ -81,14 +79,6 @@ class URL:
 
             # usually, the content comes after the headers
             content = response.read()
-            if "301" in content:
-                try:
-                    print("Redirecting")
-                    self.__init__(response_headers['location'])
-                    return self.request()
-                except:
-                    pass
-
             s.close()
 
             # it's the body that we're going to display,
@@ -108,26 +98,48 @@ class URL:
     def add_header(self, header, value):
         return "{}: {}\r\n".format(header, value)
 
+WIDTH, HEIGHT = 800, 600
 
-def show(body):
+class Browser:
+    def __init__(self):
+        self.window = tkinter.Tk()
+        self.canvas = tkinter.Canvas(
+            self.window,
+            width=WIDTH,
+            height=HEIGHT
+        )
+        self.canvas.pack()
+
+    def load(self, url):
+
+        body = url.request()
+
+        text = lex(body)
+
+        HSTEP, VSTEP = 13, 18
+        cursor_x, curosr_y = HSTEP, VSTEP
+        for c in text:
+            self.canvas.create_text(cursor_x, curosr_y, text=c)
+            cursor_x += HSTEP
+            if cursor_x >= WIDTH - HSTEP:
+                curosr_y += VSTEP
+                cursor_x = HSTEP
+
+
+def lex(body):
+    text = ""
     in_tag = False
-    in_entity = False
-    entity = ""
+
     for c in body:
         if c == "<":
             in_tag = True
         elif c == ">":
             in_tag = False
-        elif c == "&":
-            in_entity = True
-        elif c == ";":
-            in_entity = False
-            print_entity(entity)
-            entity = ""
-        elif in_entity:
-            entity += c
         elif not in_tag:
-            print(c, end="")
+            text += c
+
+    return text
+
 def view_source(body):
     for c in body:
         if c == ">":
@@ -146,21 +158,17 @@ def print_entity(entity):
 
 
 # Load a web page just by stringing together request and show
-def load(url):
-    body = url.request()
-    if url.view_source:
-        view_source(body);
-    else:
-        show(body)
+
 
 if __name__ == "__main__":
     import sys 
     default_url = "file:///home/iceman/overthewire.txt"
     
     if len(sys.argv) == 2:
-        load(URL(sys.argv[1]))
+        Browser().load(URL(sys.argv[1]))
+        tkinter.mainloop()
     elif len(sys.argv) == 1: 
-        load(URL(default_url))
+        Browser().load(URL(default_url))
 
 
 
