@@ -4,11 +4,6 @@ import tkinter
 
 class URL:
     def __init__(self, url):
-        self.view_source = False
-        if url.startswith("view-source:"):
-            _, url = url.split(":", 1) 
-            self.view_source = True
-
         if "://" in url:
             self.scheme, url = url.split("://", 1) # extract the scheme and url
             #assert self.scheme == "http" # only support http
@@ -37,34 +32,21 @@ class URL:
                 type=socket.SOCK_STREAM,
                 proto=socket.IPPROTO_TCP,
             )
-            # socket created -> connect it to another computer
-            # for that -> provide a host and a port
-            # the port -> depends on the protocal you are using;
-            # for now, it should be 80.
             s.connect((self.host, self.port))
             if self.scheme == "https":
                 ctx = ssl.create_default_context()
                 s = ctx.wrap_socket(s, server_hostname=self.host)
 
-            # The connection -> established
-            # -> make request to tthe other server.
-            # -> by sending it some data using the 
-            # send method
             request = "GET {} HTTP/1.0\r\n".format(self.path)
             request += self.add_header("Host", self.host)
-            request += self.add_header("Connection", "close")
             request += self.add_header("User-Agent", "icefox")
-            request += self.add_header("Localtion", "/")
-            request += "\r\n" ## 2 \r\n newlines -> the end
+            request += "\r\n" 
             s.send(request.encode("utf8"))
 
-            # read the server's response
             response = s.makefile("r", encoding="utf8", newline="\r\n")
-            # split the response into pieces
             statusline = response.readline()
             version, status, explaination = statusline.split(" ", 2)
 
-            # after the status line come the headers
             response_headers = {}
             while True:
                 line = response.readline()
@@ -72,26 +54,21 @@ class URL:
                 header, value = line.split(":", 1)
                 response_headers[header.casefold()] = value.strip()
 
-            # some header -> tell us that the data we're 
-            # trying to access is being sent in an unsual way 
             assert "transer_encoding" not in response_headers
             assert "content_encoding" not in response_headers
 
-            # usually, the content comes after the headers
             content = response.read()
             s.close()
 
-            # it's the body that we're going to display,
-            # return that
             return content
         elif self.scheme == "file":
-            # return the content in the file provided the path
             with open(self.path, "r") as f:
                 return f.read()
         elif self.scheme == "data" and self.data_type == "text/html":
             return self.data
         else:
             print("Unsupported scheme")
+            
             # notify error, exit
 
 
@@ -128,6 +105,8 @@ class Browser:
 
         for x,y,c in self.display_list:
             self.canvas.create_text(x, y - self.scroll, text=c)
+            if y > self.scroll + HEIGHT: continue
+            if y + VSTEP < self.scroll: continue
 
     def scrolldown(self, e):
         self.scroll += SCROLL_STEP
@@ -159,34 +138,10 @@ def lex(body):
 
     return text
 
-def view_source(body):
-    for c in body:
-        if c == ">":
-            print(c)
-        else:
-            print(c, end="")
-
-def print_entity(entity):
-    if entity == "lt":
-        print("<", end="")
-    elif entity == "gt":
-        print(">", end="")
-    else:
-        print(entity, end="")
-
-
-
-# Load a web page just by stringing together request and show
-
 
 if __name__ == "__main__":
     import sys 
-    default_url = "file:///home/iceman/overthewire.txt"
-    
-    if len(sys.argv) == 2:
-        Browser().load(URL(sys.argv[1]))
-        tkinter.mainloop()
-    elif len(sys.argv) == 1: 
-        Browser().load(URL(default_url))
+    Browser().load(URL(sys.argv[1]))
+    tkinter.mainloop()
 
 
